@@ -43,6 +43,16 @@ ol.road{padding-left:20px}ol.road li{margin:6px 0}
 .small{font-size:12px;color:#9ca3af;margin-top:6px}
 .hide{display:none}
 .flex{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.mini{border:1px solid #d1d5db;background:#fff;color:#6b7280;border-radius:6px;padding:1px 7px;font-size:11px;margin-left:5px;cursor:pointer;font-family:inherit}
+.mini:hover{border-color:#ef4444;color:#ef4444}
+.mini.on{background:#d1fae5;border-color:#10b981;color:#065f46;font-weight:600}
+.mini.on-w{background:#fee2e2;border-color:#ef4444;color:#b91c1c;font-weight:600}
+.bar-wrap{height:6px;background:#f3f4f6;border-radius:999px;overflow:hidden;margin:8px 0}
+.bar{height:100%;background:linear-gradient(90deg,#f97316,#ef4444)}
+.lv{display:inline-block;border-radius:6px;padding:0 6px;font-size:11px;margin-right:6px;font-weight:600}
+.lv.p0{background:#fee2e2;color:#b91c1c}.lv.p1{background:#fef3c7;color:#92400e}.lv.p2{background:#e5e7eb;color:#4b5563}
+li.done{color:#9ca3af}
+li.done s{text-decoration:line-through}
 </style>
 </head>
 <body>
@@ -152,6 +162,10 @@ ol.road{padding-left:20px}ol.road li{margin:6px 0}
     <div id="b-out"></div>
   </div>
   <div class="card">
+    <h2>薄弱清单（跨方向汇总）</h2>
+    <div id="b-weak"></div>
+  </div>
+  <div class="card">
     <h2>面经 → 抽题 + 高频榜</h2>
     <label>粘贴面经全文（牛客 / 脉脉 / 群里复制的都行，越完整越准）</label>
     <textarea id="b-jing" rows="6" placeholder="把面经原文粘进来"></textarea>
@@ -191,6 +205,7 @@ document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");
  ["p","d","j","l","b","v","r"].forEach(k=>el("t-"+k).classList.add("hide"));
  el("t-"+t.dataset.t).classList.remove("hide");
+ try{localStorage.setItem(TABKEY,t.dataset.t)}catch(e){}   // 记住上次所在页（吸收自备战站的 TABKEY 设计）
 });
 /* profile */
 function initSkills(){
@@ -260,8 +275,12 @@ function copyGreet(){
  copyToClipboard(t).then(r=>msg(r.ok?"招呼语已复制，去平台粘贴即可":"复制失败，请手动选中文字复制",r.ok));
 }
 function switchTab(name){
+ if(!name)return false;
+ try{localStorage.setItem(TABKEY,name)}catch(e){}
  document.querySelectorAll('.tab[data-t="'+name+'"]').forEach(t=>t.click());
+ return true;
 }
+function lastTab(){try{return localStorage.getItem(TABKEY)||""}catch(e){return ""}}
 function msg(text,ok){
  const box=el("toast");
  box.textContent=text;
@@ -293,7 +312,8 @@ function buildBackup(){
   version:2,
   exportedAt:new Date().toISOString(),
   profile:JSON.parse(localStorage.getItem("pipeline_profile")||"null"),
-  ledger:JSON.parse(localStorage.getItem("pipeline_ledger")||"[]")
+  ledger:JSON.parse(localStorage.getItem("pipeline_ledger")||"[]"),
+  prep:JSON.parse(localStorage.getItem(PREPKEY)||"{}")
  },null,2);
 }
 function exportData(){
@@ -320,9 +340,11 @@ function importData(text){
   else localStorage.setItem("pipeline_profile",JSON.stringify(data.profile));
  }
  if(data.ledger!==undefined)localStorage.setItem("pipeline_ledger",JSON.stringify(data.ledger));
- loadProfile();renderLedger();renderPrep();renderPlan();renderInfer();
+ if(data.prep!==undefined)localStorage.setItem(PREPKEY,JSON.stringify(data.prep||{}));
+ loadProfile();renderLedger();renderPrep();renderPlan();renderInfer();renderWeak();
  const n=Array.isArray(data.ledger)?data.ledger.length:0;
- return {ok:true,msg:"导入完成：画像 "+(data.profile?"已恢复":"空")+"，台账 "+n+" 条"};
+ const p=data.prep&&typeof data.prep==="object"?Object.keys(data.prep).length:0;
+ return {ok:true,msg:"导入完成：画像 "+(data.profile?"已恢复":"空")+"，台账 "+n+" 条，复习标记 "+p+" 条"};
 }
 function onImportFile(input){
  const f=input.files&&input.files[0];
@@ -337,7 +359,7 @@ function onImportFile(input){
 }
 function clearData(){
  if(!confirm("确定清空全部数据（画像 + 投递台账）？此操作不可撤销，建议先导出备份。"))return {ok:false,msg:"已取消"};
- localStorage.removeItem("pipeline_profile");localStorage.removeItem("pipeline_ledger");
+ localStorage.removeItem("pipeline_profile");localStorage.removeItem("pipeline_ledger");localStorage.removeItem(PREPKEY);localStorage.removeItem(TABKEY);
  if(typeof location!=="undefined"&&location.reload)location.reload();
  return {ok:true,msg:"已清空"};
 }
@@ -387,6 +409,96 @@ fe:{points:["闭包/原型链/事件循环","虚拟 DOM 与 diff 策略","状态
 const TOPICS=JD_DICT.concat([["并发","__conc__"],["线程","__conc__"],["线程池","__conc__"],["进程","__conc__"],["锁","__conc__"],["JVM","__jvm__"],["GC","__jvm__"],["索引","__idx__"],["事务","__tx__"],["MVCC","__tx__"],["TCP","__net__"],["HTTP","__net__"],["三次握手","__net__"],["HTTPS","__net__"],["Kafka","__mq__"],["RabbitMQ","__mq__"],["RocketMQ","__mq__"],["手撕","__algo__"],["算法题","__algo__"],["LRU","redis"],["秒杀","__scene__"],["限流","__scene__"],["幂等","__scene__"],["分布式","__dist__"],["CAP","__dist__"],["八股","__bagu__"]]);
 const TLABEL={__linux__:"Linux",__docker__:"容器/K8s",__mq__:"消息队列",__ms__:"微服务",__es__:"Elasticsearch",__unity__:"Unity/C#",__ml__:"机器学习",__algo__:"算法",__conc__:"并发",__jvm__:"JVM",__idx__:"MySQL索引",__tx__:"事务",__net__:"网络",__scene__:"场景设计",__dist__:"分布式",__bagu__:"八股"};
 function topicLabel(k){return TLABEL[k]||(SKILLS.find(x=>x[0]===k)||["",k])[1]}
+/* 复习状态：会 / 不会 / 收藏 —— 吸收自私有备战站（state.st + 进度统计），升级为跨模块共用一份状态 */
+const PREPKEY="pipeline_prep";
+const TABKEY="pipeline_tab";
+function qkey(text){
+ let h=5381;const s=String(text||"").slice(0,160);
+ for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;
+ return "q"+Math.abs(h).toString(36);
+}
+function getPrep(){try{const o=JSON.parse(localStorage.getItem(PREPKEY)||"{}");return o&&typeof o==="object"?o:{}}catch(e){return {}}}
+function prepState(text){const e=getPrep()[qkey(text)];return e&&e.s?e.s:""}
+let _qreg={};
+function registerQ(text){const k=qkey(text);if(!_qreg[k])_qreg[k]=String(text||"").slice(0,160);return k}
+function markPrep(key,val){
+ const p=getPrep();const cur=p[key];const txt=_qreg[key]||"";
+ if(val==="star"){
+  if(cur){cur.star=!cur.star;if(!cur.t)cur.t=txt;if(!cur.s&&!cur.star)delete p[key]}
+  else p[key]={t:txt,s:"",star:true};
+ }else{
+  if(cur&&cur.s===val)cur.s="";
+  else p[key]={t:(cur&&cur.t)||txt,s:val,star:!!(cur&&cur.star)};
+ }
+ localStorage.setItem(PREPKEY,JSON.stringify(p));renderPrep();renderWeak();return p;
+}
+function noteText(key,text){
+ const p=getPrep();
+ if(!p[key])p[key]={t:String(text||"").slice(0,160),s:""};
+ else if(!p[key].t)p[key].t=String(text||"").slice(0,160);
+ localStorage.setItem(PREPKEY,JSON.stringify(p));
+}
+function prepStats(items){
+ const p=getPrep();let rated=0,know=0,weak=0,star=0;
+ (items||[]).forEach(t=>{const e=p[qkey(t)];if(!e)return;if(e.s){rated++;e.s==="know"?know++:weak++}if(e.star)star++});
+ return {total:(items||[]).length,rated:rated,know:know,weak:weak,star:star};
+}
+function miniBtns(text){
+ const key=registerQ(text);
+ const e=getPrep()[key]||{};
+ return '<span style="white-space:nowrap">'+
+  '<button class="mini'+(e.s==="know"?" on":"")+'" onclick="markPrep(\''+key+'\',\'know\')" title="已掌握">会</button>'+
+  '<button class="mini'+(e.s==="weak"?" on-w":"")+'" onclick="markPrep(\''+key+'\',\'weak\')" title="答不出，进薄弱清单">不会</button>'+
+  '<button class="mini'+(e.star?" on":"")+'" onclick="markPrep(\''+key+'\',\'star\')" title="收藏">★</button>'+
+  '</span>';
+}
+function prepRow(text){
+ const s=prepState(text);
+ return '<li class="'+(s==="know"?"done":"")+'"><span '+(s==="know"?"":"")+'>'+text+"</span>"+miniBtns(text)+"</li>";
+}
+function allPrepItems(){
+ const d=BANK[dirBest()]||BANK.agent;
+ const items=[].concat(d.points,d.scene,d.proj);
+ projList().forEach(p=>items.push("讲一下你做过的「"+p.name+"」：先讲核心设计，再主动补边界"));
+ Object.keys(getPrep()).forEach(k=>{const t=getPrep()[k].t;if(t)items.push(t)});
+ return items;
+}
+function weakList(){
+ const p=getPrep();
+ return Object.keys(p).filter(k=>p[k].s==="weak").map(k=>p[k].t||textOfKey(k)||k);
+}
+/* 自愈：老数据/迁移后缺原文时，从内置题库反查（避免薄弱清单显示哈希键） */
+function textOfKey(k){
+ for(const id in BANK){const d=BANK[id];
+  const all=[].concat(d.points,d.scene,d.proj);
+  for(let i=0;i<all.length;i++)if(qkey(all[i])===k)return all[i];
+ }
+ return "";
+}
+function renderWeak(){
+ const box=el("b-weak");if(!box)return;
+ const w=weakList();const st=prepStats(allPrepItems());
+ let html='<div class="small">已评 '+st.rated+" / "+st.total+" ｜ 会 "+st.know+" ｜ 薄弱 "+st.weak+" ｜ 收藏 "+st.star+"</div>";
+ html+='<div class="bar-wrap"><div class="bar" style="width:'+(st.total?Math.round(st.rated/st.total*100):0)+'%"></div></div>';
+ html+=w.length?'<ol class="road">'+w.map(t=>"<li>"+esc(t)+miniBtns(t)+"</li>").join("")+"</ol>":'<div class="small">还没有标记「不会」的条目。在上面清单里逐条自评，这里会自动汇总出跨方向的薄弱清单。</div>';
+ box.innerHTML=html;
+}
+/* 必考榜：按「有多少道题涉及该考点」分级（P0 ≥3 道 / P1 =2 道 / P2 =1 道）——吸收自备战站「必考30」的筛选机制 */
+function hotRank(questions){
+ const cnt={};
+ questions.forEach(q=>{
+  const seen=new Set();
+  TOPICS.forEach(([kw,key])=>{if(key!=="__none__"&&q.includes(kw))seen.add(key)});
+  seen.forEach(k=>{cnt[k]=(cnt[k]||0)+1});
+ });
+ const scored=questions.map(q=>{
+  let lv=0;
+  TOPICS.forEach(([kw,key])=>{if(key!=="__none__"&&q.includes(kw)&&(cnt[key]||0)>lv)lv=cnt[key]||0});
+  return {q:q,lv:lv};
+ });
+ scored.sort((a,b)=>b.lv-a.lv);
+ return scored.map(x=>({q:x.q,lv:x.lv>=3?"P0":x.lv===2?"P1":"P2"}));
+}
 function dirBest(){
  if(!profile)return "agent";const s=profile.skills||{};
  const hits=DIRS.filter(d=>d.need.some(k=>s[k]));return hits.length?hits[0].id:"agent";
@@ -395,19 +507,23 @@ function renderPrep(){
  const sel=el("b-dir");const best=dirBest();
  if(document.activeElement!==sel)sel.value=best;
  const d=BANK[sel.value]||BANK.agent;
- const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
- const freq={};const s=(profile&&profile.skills)||{};
- recs.forEach(r=>{TOPICS.forEach(([kw,key])=>{if(key!=="__none__"&&r.jd&&r.jd.includes(kw))freq[key]=(freq[key]||0)+1})});
+ const freq=ledgerTopicFreq();
  const gap=[...new Set(Object.entries(freq).filter(([k,v])=>TLABEL[k]&&v>=2).map(([k])=>TLABEL[k]))].slice(0,6);
  let html="";
  if(gap.length)html+='<div class="tip" style="margin-top:0">台账里出现 ≥2 次的考点（你投的岗位真实在考）：<b>'+gap.join(" / ")+"</b> —— 复习优先级以此为准，别凭感觉。</div>";
- html+='<h3>必须掌握的知识点（'+el("b-dir").selectedOptions[0].text+'）</h3><ol class="road">'+d.points.map(x=>"<li>"+x+"</li>").join("")+"</ol>";
- html+='<h3>面试官大概率会问的场景题</h3><ol class="road">'+d.scene.map(x=>"<li>"+x+"</li>").join("")+"</ol>";
- html+='<h3>你的项目防御题（简历上写了就必须答得出）</h3><ol class="road">'+d.proj.map(x=>"<li>"+x+"</li>").join("");
- const ps=projList();if(ps.length)ps.forEach(p=>{html+="<li>讲一下你做过的「"+esc(p.name)+"」：先讲核心设计，再主动补边界</li>"});
+ html+='<h3>必须掌握的知识点（'+el("b-dir").selectedOptions[0].text+'）</h3><ol class="road">'+d.points.map(prepRow).join("")+"</ol>";
+ html+='<h3>面试官大概率会问的场景题</h3><ol class="road">'+d.scene.map(prepRow).join("")+"</ol>";
+ html+='<h3>你的项目防御题（简历上写了就必须答得出）</h3><ol class="road">'+d.proj.map(prepRow).join("");
+ const ps=projList();if(ps.length)ps.forEach(p=>{const t="讲一下你做过的「"+p.name+"」：先讲核心设计，再主动补边界";html+=prepRow(t)});
  html+="</ol>";
  html+='<div class="small">用法：知识点逐条过，场景题先自己答 30 秒再对照备战站；项目防御题答不出的，要么补齐要么别写进简历。</div>';
+ html+='<div style="margin-top:12px"><button onclick="resetPrep()">清空本页自评</button></div>';
  el("b-out").innerHTML=html;
+ renderWeak();
+}
+function resetPrep(){
+ if(!confirm("清空全部「会 / 不会 / 收藏」标记？"))return {ok:false,msg:"已取消"};
+ localStorage.removeItem(PREPKEY);renderPrep();renderWeak();return {ok:true,msg:"已清空"};
 }
 function parseJing(){
  const t=el("b-jing").value.trim();
@@ -422,8 +538,12 @@ function parseJing(){
  if(!qs.length){html+='<div class="warn">没抽到问句——面经里要带「？」或「1. 」开头的题目行。</div>'}
  else{
   if(top.length)html+='<h3>高频考点榜（按抽出的 '+qs.length+' 道题统计，别凭感觉排）</h3><div class="chips">'+top.map(([k,v])=>'<span class="chip on">'+esc(k)+" × "+v+"</span>").join("")+"</div>";
-  html+='<h3>抽出的题（全量列出，无截断）</h3><ol class="road">'+qs.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ol>";
-  html+='<div class="small">高频榜与「备考清单」对照着看：高频但你答不出的 = 最优先补。新题直接补进备战站对应标签。</div>';
+  const ranked=hotRank(qs);
+  const p0=ranked.filter(x=>x.lv==="P0").length,p1=ranked.filter(x=>x.lv==="P1").length;
+  html+='<h3>必考榜（按考频排序：P0 生死题 '+p0+' 道 / P1 高频 '+p1+' 道 / P2 其余）</h3>';
+  html+='<div class="small" style="margin-bottom:6px">分级规则：该题所涉考点在这场面经里出现 ≥3 次 → P0，=2 次 → P1，其余 P2。P0 必须能讲 60 秒。</div>';
+  html+='<ol class="road">'+ranked.map(x=>'<li><span class="lv '+x.lv.toLowerCase()+'">'+x.lv+'</span>'+esc(x.q)+miniBtns(x.q)+"</li>").join("")+"</ol>";
+  html+='<div class="small">高频榜与「备考清单」对照着看：高频但你答不出的 = 最优先补。标记「不会」会自动进薄弱清单。</div>';
  }
  el("b-jingout").innerHTML=html;
 }
@@ -508,7 +628,8 @@ async function aiPolish(){
   else el("j-out").innerHTML+='<div class="warn">'+esc(j.msg)+"</div>";
  }catch(e){alert("连不上本地服务：先双击 Desktop 上的 start-pipeline.bat")}
 }
-initSkills();loadProfile();renderLedger();renderPrep();renderPlan();
+initSkills();loadProfile();renderLedger();renderPrep();renderPlan();renderWeak();
+switchTab(lastTab());   // 恢复到上次所在标签页
 </script>
 </body>
 </html>

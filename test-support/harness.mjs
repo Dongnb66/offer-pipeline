@@ -81,6 +81,7 @@ export function loadApp(opts = {}) {
     "projList,dirBest,renderPlan,renderInfer,confirmInfer,genPack,parseJing,analyzeJD," +
     "renderLedger,renderDirs,renderPrep,loadProfile,saveProfile,esc,monthNow,SKILLS,DIRS,JD_DICT,TOPICS,ALIAS,ADJ," +
     "addRecord,buildBackup,importData,clearData,copyToClipboard,greetLength,switchTab,msg,toLedger," +
+    "qkey,getPrep,prepState,markPrep,prepStats,miniBtns,prepRow,weakList,renderWeak,allPrepItems,hotRank,resetPrep,lastTab,registerQ,PREPKEY,TABKEY," +
     "setProfile:(p)=>{profile=p},getProfile:()=>profile,el:el};";
 
   const factory = new Function(

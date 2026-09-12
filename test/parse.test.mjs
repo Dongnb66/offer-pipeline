@@ -20,7 +20,7 @@ test("parseJing 能抽出问句行（编号 / 问号 / 问：三种写法）", (
   app.el("b-jing").value = SAMPLE;
   app.parseJing();
   const html = app.el("b-jingout").innerHTML;
-  assert.match(html, /抽出的题/);
+  assert.match(html, /必考榜/);
   assert.equal(countItems(html), 5, "应抽出 5 道题（含编号行与问：行），普通叙述行不计");
 });
 
