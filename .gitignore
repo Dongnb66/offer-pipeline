@@ -1,0 +1,7 @@
+# LLM Key - never commit
+llm.json
+
+node_modules/
+*.log
+.DS_Store
+Thumbs.db

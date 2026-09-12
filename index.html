@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>求职流水线助手 MVP v0.2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif}
+body{background:#f5f6f8;color:#1f2937;font-size:14px;line-height:1.65}
+.header{background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;padding:22px 28px 18px}
+.header h1{font-size:22px;font-weight:600}
+.header p{font-size:13px;opacity:.9;margin-top:4px}
+.tabs{display:flex;background:#fff;border-bottom:1px solid #e5e7eb;padding:0 16px;position:sticky;top:0;z-index:10}
+.tab{padding:12px 16px;cursor:pointer;font-size:14px;color:#6b7280;border-bottom:2px solid transparent;user-select:none}
+.tab:hover{color:#ef4444}
+.tab.on{color:#ef4444;border-bottom-color:#ef4444;font-weight:600}
+.wrap{max-width:960px;margin:0 auto;padding:20px 16px 60px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;margin-bottom:16px}
+.card h2{font-size:16px;font-weight:600;color:#111827;margin-bottom:10px;border-left:3px solid #ef4444;padding-left:10px}
+.card h3{font-size:14px;font-weight:600;color:#374151;margin:12px 0 6px}
+label{display:block;font-size:13px;color:#4b5563;margin:10px 0 4px}
+input[type=text],input[type=date],select,textarea{width:100%;border:1px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;background:#fff}
+textarea{resize:vertical;min-height:80px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#ef4444}
+button{background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:14px;cursor:pointer;font-family:inherit}
+button:hover{opacity:.88}
+button.ghost{background:#fff;color:#ef4444;border:1px solid #fca5a5}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.chip{border:1px solid #d1d5db;border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;background:#fff;color:#4b5563;user-select:none}
+.chip.on{background:#fee2e2;border-color:#ef4444;color:#b91c1c;font-weight:600}
+.tip{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;font-size:13px;color:#9a3412;margin-bottom:14px}
+.ok{background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:10px 14px;font-size:13px;color:#065f46;margin-top:10px}
+.warn{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;margin-top:10px}
+.out{background:#f9fafb;border:1px dashed #d1d5db;border-radius:8px;padding:14px;font-size:14px;white-space:pre-wrap;margin-top:10px;min-height:40px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+th{background:#f3f4f6;color:#374151;text-align:left;padding:8px 10px;font-weight:600}
+td{border-top:1px solid #e5e7eb;padding:8px 10px;vertical-align:top}
+.tag{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px}
+.tag.投{background:#fee2e2;color:#b91c1c}.tag.读{background:#fef3c7;color:#92400e}
+.tag.面{background:#d1fae5;color:#065f46}.tag.挂{background:#e5e7eb;color:#4b5563}
+ol.road{padding-left:20px}ol.road li{margin:6px 0}
+.small{font-size:12px;color:#9ca3af;margin-top:6px}
+.hide{display:none}
+.flex{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>求职流水线助手 MVP v0.1</h1>
+  <p>画像 → 方向推荐（陪练制）→ JD 分析 → 打招呼初稿 → 投递台账 → 弱点汇总 ｜ 数据全部存在本机浏览器，不上传</p>
+</div>
+<div class="tabs">
+  <div class="tab on" data-t="p">我的画像</div>
+  <div class="tab" data-t="d">项目方向推荐</div>
+  <div class="tab" data-t="j">JD 分析·打招呼</div>
+  <div class="tab" data-t="l">投递台账</div>
+  <div class="tab" data-t="b">面试备战</div>
+  <div class="tab" data-t="v">简历直填包</div>
+  <div class="tab" data-t="r">三不原则</div>
+</div>
+<div class="wrap">
+
+<!-- 画像 -->
+<div id="t-p">
+  <div class="card">
+    <h2>基本信息</h2>
+    <div class="grid">
+      <div><label>姓名</label><input type="text" id="p-name" placeholder="杨运栋"></div>
+      <div><label>届数（只写数字，如 2028）</label><input type="text" id="p-grade" placeholder="2028"></div>
+      <div><label>专业（开场身份用，禁止出现学校名）</label><input type="text" id="p-major" value="计算机科学与技术"></div>
+      <div><label>GitHub 主页链接（可选）</label><input type="text" id="p-github" placeholder="https://github.com/xxx"></div>
+      <div><label>学校（只用于在线简历表单，招呼语里永远不出现）</label><input type="text" id="p-school" placeholder="xx 学院"></div>
+    </div>
+    <label>证书（一行一个，没有就不填）</label>
+    <textarea id="p-certs" rows="2" placeholder="如：计算机二级 WPS（只写真有的）"></textarea>
+    <label>实习经历（一行一段：公司｜岗位｜起止年月｜做了什么；没有就不填）</label>
+    <textarea id="p-intern" rows="3" placeholder="xx 科技｜后端实习｜2026.07-2026.09｜参与 xx 模块开发"></textarea>
+    <div id="p-infer"></div>
+    <label>我真实掌握的技能（决定推荐方向和招呼语能写什么，没勾的绝不会被写进去）</label>
+    <div class="chips" id="p-skills"></div>
+    <label>我的项目（每行一个：项目名｜一句话亮点｜链接可选）</label>
+    <textarea id="p-projects" rows="4" placeholder="python-learning-agent｜FastAPI+LangGraph 教学智能体，94 条 pytest，防幻觉三道代码级硬约束｜https://github.com/xxx"></textarea>
+    <div style="margin-top:14px"><button onclick="saveProfile()">保存画像（存本机）</button> <button class="ghost" onclick="loadProfile()">重新载入</button></div>
+    <div id="p-msg"></div>
+  </div>
+</div>
+
+<!-- 方向推荐 -->
+<div id="t-d" class="hide">
+  <div class="tip">陪练制：平台给方向、路线图和阶段验收题，<b>项目必须你自己动手做</b>——简历上只写你答得出设计决策的项目。</div>
+  <div class="card"><h2>按当前画像推荐</h2><div id="d-out"><span class="small">先在「我的画像」勾技能并保存。</span></div></div>
+  <div class="card"><h2>补强计划（加强 / 拓展 / 新项目）</h2><div id="d-plan"><span class="small">先在「我的画像」勾技能并保存。</span></div></div>
+</div>
+
+<!-- JD 分析 -->
+<div id="t-j" class="hide">
+  <div class="tip">只做两件事：① 对照画像标出缺口（<b>能力缺口只标注，永不代填</b>）② 生成打招呼<b>初稿</b>——最后一句钩子请照着 JD 自己加。</div>
+  <div class="card">
+    <h2>粘贴岗位 JD 全文</h2>
+    <div class="grid">
+      <div><label>公司（可选，仅供台账记录）</label><input type="text" id="j-co"></div>
+      <div><label>岗位名</label><input type="text" id="j-role" placeholder="AI Agent 开发实习生"></div>
+      <div><label>对方身份</label><select id="j-who"><option value="hr">HR</option><option value="tech">技术官</option></select></div>
+      <div><label>记入台账状态</label><select id="j-status"><option>已投递</option><option>准备投</option></select></div>
+    </div>
+    <label>JD 原文 / 岗位截图里的文字</label>
+    <textarea id="j-jd" rows="6" placeholder="把 JD 全文粘进来，越完整分析越准"></textarea>
+    <div style="margin-top:12px"><button onclick="analyzeJD()">分析并生成打招呼初稿</button></div>
+    <div id="j-out"></div>
+  </div>
+</div>
+
+<!-- 台账 -->
+<div id="t-l" class="hide">
+  <div class="card">
+    <h2>投递记录</h2>
+    <div class="flex">
+      <div><label>公司</label><input type="text" id="l-co" style="width:140px"></div>
+      <div><label>岗位</label><input type="text" id="l-role" style="width:160px"></div>
+      <div><label>日期</label><input type="date" id="l-date" style="width:150px"></div>
+      <div><label>状态</label><select id="l-status" style="width:110px"><option>已投递</option><option>已读未回</option><option>约面</option><option>不合适</option><option>挂了</option></select></div>
+      <button onclick="addRecord()">加入台账</button>
+    </div>
+    <label>JD 摘要（可选，用于关键词统计）</label>
+    <textarea id="l-jd" rows="2"></textarea>
+    <div id="l-stats"></div>
+    <div id="l-table"></div>
+  </div>
+</div>
+
+<!-- 备战 -->
+<div id="t-b" class="hide">
+  <div class="tip">备考清单 = 你的方向 + 台账高频词 + 项目，自动生成。面经自动搜索（牛客等）是二期后端功能——MVP 先把面经<b>复制粘贴</b>进来，应用自动抽题、打标、算高频榜。</div>
+  <div class="card">
+    <h2>备考清单</h2>
+    <label>求职方向（保存画像后会自动选到最匹配的方向）</label>
+    <select id="b-dir" style="max-width:280px" onchange="renderPrep()"><option value="agent">AI Agent 应用开发</option><option value="be">后端开发</option><option value="fe">前端/全栈</option></select>
+    <div id="b-out"></div>
+  </div>
+  <div class="card">
+    <h2>面经 → 抽题 + 高频榜</h2>
+    <label>粘贴面经全文（牛客 / 脉脉 / 群里复制的都行，越完整越准）</label>
+    <textarea id="b-jing" rows="6" placeholder="把面经原文粘进来"></textarea>
+    <div style="margin-top:10px"><button onclick="parseJing()">抽题并统计</button></div>
+    <div id="b-jingout"></div>
+  </div>
+</div>
+
+<!-- 原则 -->
+<div id="t-r" class="hide">
+  <div class="card">
+    <h2>本工具三不原则（红线，永不违反）</h2>
+    <ol class="road">
+      <li><b>不收账号密码。</b>GitHub 早已废除密码授权。将来接推送只走 OAuth 授权或用户自己的 PAT 令牌；MVP 阶段平台只生成一键推送脚本，用户自己双击执行。</li>
+      <li><b>不自动代投。</b>自动提交违反 BOSS/实习僧用户协议，封号风险由用户承担不起。工具只做到"一键填充 + 草稿已填"，<b>最终提交那一下永远由用户自己点</b>。</li>
+      <li><b>能力缺口不代填。</b>JD 里用户真没做过的东西，只标注缺口、给出补法建议，绝不写进招呼语和简历。简历里没有的事实，不猜。</li>
+    </ol>
+    <h3>和"帮做项目"划清界限</h3>
+    <div class="warn" style="margin-top:0">平台代做的项目 = 用户简历上答不出来的项目 = 面试一问设计决策就露馅，且全平台项目同质化会被 HR 识破。本项目定位永远是<b>陪练</b>：出方向、给路线、做验收、练追问，代码用户自己写。</div>
+  </div>
+</div>
+
+</div>
+<script>
+const SKILLS=[["py","Python"],["js","JavaScript/TS"],["java","Java"],["go","Go"],["react","React"],["vue","Vue"],["fastapi","FastAPI"],["node","Node/Express"],["mysql","MySQL"],["sqlite","SQLite"],["redis","Redis"],["langgraph","LangGraph/LangChain"],["rag","RAG"],["mcp","MCP"],["docker","Docker"],["git","Git"],["test","pytest/Jest"],["aitools","Claude Code 等提效工具"]];
+const JD_DICT=[["Python","py"],["Java","java"],["Golang","go"],["Go 语言","go"],["JavaScript","js"],["TypeScript","js"],["React","react"],["Vue","vue"],["FastAPI","fastapi"],["Node","node"],["Express","node"],["MySQL","mysql"],["SQL","mysql"],["数据库","mysql"],["Redis","redis"],["缓存","redis"],["LangChain","langgraph"],["LangGraph","langgraph"],["Agent","langgraph"],["智能体","langgraph"],["RAG","rag"],["检索增强","rag"],["MCP","mcp"],["Docker","docker"],["K8s","__docker__"],["Git","git"],["pytest","test"],["自动化测试","test"],["大模型","langgraph"],["LLM","langgraph"],["AIGC","rag"],["Linux","__linux__"],["消息队列","__mq__"],["Kafka","__mq__"],["RabbitMQ","__mq__"],["微服务","__ms__"],["Elasticsearch","__es__"],["ES","__es__"],["Unity","__unity__"],["C#","__unity__"],["PyTorch","__ml__"],["机器学习","__ml__"],["深度学习","__ml__"],["算法","__algo__"],["前端","react"],["后端","node"],["全栈","react"],["实习","__none__"],["在校","__none__"]];
+const DIRS=[
+ {id:"agent",need:["langgraph","rag"],name:"AI Agent 应用开发",why:"你已有 LangGraph/RAG 技能底子，Agent 岗需求旺且作品集最容易被 clone 验证",road:["定一个真实场景（学习助手/行程规划/工具集大成）","搭确定性工作流骨架，再加 1 个真自主 ReAct 节点","写代码级硬约束（阈值/拒答/白名单）防幻觉","建评测集：常规用例挂 CI + 对抗用例 + 消融实验","README 写清架构图与取舍理由，全部推 GitHub"],check:["为什么不用 Dify/Coze 低代码平台？","你的防幻觉约束在模型层还是代码层？模型换成坏的还成立吗？","评测集怎么设计？消融证明了什么？"]},
+ {id:"be",need:["node","fastapi","mysql"],name:"后端开发",why:"你有数据库/缓存/接口底子，后端岗 JD 关键词命中率最高",road:["选场景设计数据模型，先 SQLite 后 MySQL 双驱动","加缓存层（TTL+LRU+防穿透），讲清内存/Redis 双后端取舍","JWT 登录态 + RBAC 权限 + 事务防并发","写分层测试（行为断言+冒烟），接入 CI","压测一轮，README 给出关键参数与瓶颈分析"],check:["为什么这里用缓存、那里不用？代价是什么？","事务隔离级别选的哪档，为什么？","双驱动怎么做到零业务代码改动？"]},
+ {id:"fe",need:["react","vue"],name:"前端/全栈",why:"你有组件化与工程化经验，可与其余方向组合成全栈作品",road:["选场景做 SPA，路由/状态管理/请求层封装","组件库按需引入，移动端适配过一遍","接自己写的后端接口，打通 CORS 与鉴权","Vite 构建 + Lighthouse 跑分优化","部署上线（GitHub Pages/服务器均可）"],check:["为什么选这个状态管理方案？","首屏做了哪些优化，数字是多少？","跨域是怎么解决的？"]}
+];
+let profile=null;
+function el(id){return document.getElementById(id)}
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+/* tabs */
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+ document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");
+ ["p","d","j","l","b","v","r"].forEach(k=>el("t-"+k).classList.add("hide"));
+ el("t-"+t.dataset.t).classList.remove("hide");
+});
+/* profile */
+function initSkills(){
+ const box=el("p-skills");box.innerHTML="";
+ SKILLS.forEach(([k,label])=>{
+  const c=document.createElement("div");c.className="chip";c.textContent=label;c.dataset.k=k;
+  c.onclick=()=>c.classList.toggle("on");box.appendChild(c);
+ });
+}
+function saveProfile(){
+ const skills={};document.querySelectorAll("#p-skills .chip.on").forEach(c=>skills[c.dataset.k]=1);
+ profile={name:el("p-name").value.trim(),grade:el("p-grade").value.trim(),major:el("p-major").value.trim(),github:el("p-github").value.trim(),projects:el("p-projects").value.trim(),skills};
+ localStorage.setItem("pipeline_profile",JSON.stringify(profile));
+ el("p-msg").innerHTML='<div class="ok">已保存到本机浏览器 localStorage。</div>';
+ renderDirs();
+}
+function loadProfile(){
+ const raw=localStorage.getItem("pipeline_profile");if(!raw)return;
+ profile=JSON.parse(raw);
+ el("p-name").value=profile.name||"";el("p-grade").value=profile.grade||"";
+ el("p-major").value=profile.major||"计算机科学与技术";el("p-github").value=profile.github||"";
+ el("p-projects").value=profile.projects||"";
+ el("p-school").value=profile.school||"";el("p-certs").value=profile.certs||"";el("p-intern").value=profile.intern||"";
+ document.querySelectorAll("#p-skills .chip").forEach(c=>c.classList.toggle("on",!!(profile.skills&&profile.skills[c.dataset.k])));
+ renderInfer();
+ renderDirs();
+}
+function projList(){
+ return (profile&&profile.projects?profile.projects:"").split(/\n+/).map(l=>l.trim()).filter(Boolean).map(l=>{const a=l.split(/[｜|]/);return {name:(a[0]||"").trim(),desc:(a[1]||"").trim(),link:(a[2]||"").trim(),start:(a[3]||"").trim()}}).filter(p=>p.name);
+}
+/* 方向推荐 */
+function renderDirs(){
+ const out=el("d-out");if(!profile||Object.keys(profile.skills||{}).length===0){out.innerHTML='<span class="small">先在「我的画像」勾技能并保存。</span>';return}
+ const s=profile.skills;const hits=DIRS.filter(d=>d.need.some(k=>s[k]));
+ const list=hits.length?hits:DIRS;
+ out.innerHTML=list.map(d=>{
+  const have=d.need.filter(k=>s[k]).map(k=>(SKILLS.find(x=>x[0]===k)||["",""])[1]).join("、");
+  const lack=d.need.filter(k=>!s[k]).map(k=>(SKILLS.find(x=>x[0]===k)||["",""])[1]).join("、");
+  return '<h3>▸ '+d.name+'</h3><div class="small">匹配依据：'+(have||"暂无直接匹配，可从零起步")+(lack?'｜建议补：'+lack:"")+'</div><div style="font-size:13px;margin:6px 0">'+d.why+'</div><b style="font-size:13px">路线图（陪练制，你自己动手）：</b><ol class="road">'+d.road.map(r=>"<li>"+r+"</li>").join("")+'</ol><b style="font-size:13px">阶段验收追问（答不出=还没做完）：</b><ol class="road">'+d.check.map(r=>"<li>"+r+"</li>").join("")+"</ol>";
+ }).join("");
+ renderPlan();
+}
+/* JD 分析 */
+function analyzeJD(){
+ if(!profile){el("j-out").innerHTML='<div class="warn">请先在「我的画像」保存基本信息。</div>';return}
+ const jd=el("j-jd").value,role=el("j-role").value.trim()||"该岗位",who=el("j-who").value;
+ if(!jd.trim()){el("j-out").innerHTML='<div class="warn">请粘贴 JD 全文。</div>';return}
+ const found=new Set();JD_DICT.forEach(([kw,key])=>{if(jd.includes(kw))found.add(key)});
+ const s=profile.skills||{};
+ const match=[...found].filter(k=>k!=="__none__"&&!k.startsWith("__")&&s[k]);
+ const gapTopic=[...found].filter(k=>k.startsWith("__")&&k!=="__none__").map(k=>({__linux__:"Linux",__mq__:"消息队列",__ms__:"微服务",__es__:"Elasticsearch",__unity__:"Unity/C#",__ml__:"机器学习/深度学习",__algo__:"算法"}[k]));
+ const gapSkill=[...found].filter(k=>k!=="__none__"&&!k.startsWith("__")&&!s[k]).map(k=>(SKILLS.find(x=>x[0]===k)||["",""])[1]);
+ const projs=projList();
+ let greet=(who==="hr"?"您好":"老师好")+"，我是"+(profile.grade||"__届")+"届"+(profile.major||"__专业")+"在读"+(profile.name||"__")+"，看到贵司「"+role+"」岗位与我的方向很匹配：\n";
+ projs.slice(0,2).forEach(p=>{greet+="· 独立开发过 "+p.name+(p.desc?"（"+p.desc+"）":"")+"\n"});
+ if(match.length)greet+="· 常用技术栈："+match.map(k=>(SKILLS.find(x=>x[0]===k)||["",""])[1]).slice(0,5).join(" / ")+"\n";
+ if(profile.github)greet+="· 代码与数据全部开源可验证："+profile.github+"\n";
+ greet+="期待有机会与您沟通。";
+ let html='<h3 style="margin-top:16px">JD 关键词命中（画像内，可写进招呼语）</h3><div class="chips">'+(match.map(k=>'<span class="chip on">'+(SKILLS.find(x=>x[0]===k)||["",""])[1]+"</span>").join("")||'<span class="small">无</span>')+"</div>";
+ if(gapTopic.length||gapSkill.length)html+='<h3>缺口（<b style="color:#b91c1c">只标注不代填</b>，招呼语里已自动排除）</h3><div class="chips">'+[...gapSkill,...gapTopic].map(x=>'<span class="chip">'+esc(x)+"</span>").join("")+"</div>"+'<div class="small">补法建议：缺口若为表达类（其实做过没写清）→ 补进项目描述；若为能力类 → 走「项目方向推荐」里对应路线补齐，别硬写。</div>';
+ html+='<h3>打招呼初稿（直接可复制，最后一句钩子自己加）</h3><div class="out" id="greet">'+esc(greet)+'</div><div style="margin-top:10px"><button onclick="copyGreet()">复制招呼语</button> <button class="ghost" onclick="aiPolish()">AI 润色（需本地服务+Key）</button> <button class="ghost" onclick="toLedger()">记入投递台账</button></div>';
+ el("j-out").innerHTML=html;
+}
+function copyGreet(){const t=el("greet").textContent;navigator.clipboard.writeText(t).then(()=>{},()=>{})}
+function toLedger(){
+ const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
+ recs.unshift({co:el("j-co").value.trim(),role:el("j-role").value.trim(),date:new Date().toISOString().slice(0,10),status:el("j-status").value||"已投递",jd:el("j-jd").value.trim().slice(0,500)});
+ localStorage.setItem("pipeline_ledger",JSON.stringify(recs));renderLedger();
+ document.querySelectorAll(".tab")[3].click();
+}
+/* 台账 */
+function addRecord(){
+ if(!el("l-co").value.trim()&&!el("l-role").value.trim())return;
+ const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
+ recs.unshift({co:el("l-co").value.trim(),role:el("l-role").value.trim(),date:el("l-date").value,status:el("l-status").value,jd:el("l-jd").value.trim().slice(0,500)});
+ localStorage.setItem("pipeline_ledger",JSON.stringify(recs));
+ el("l-co").value="";el("l-role").value="";el("l-jd").value="";renderLedger();
+}
+function delRec(i){const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");recs.splice(i,1);localStorage.setItem("pipeline_ledger",JSON.stringify(recs));renderLedger()}
+const STC={"已投递":"投","已读未回":"读","约面":"面","不合适":"挂","挂了":"挂","准备投":"投"};
+function renderLedger(){
+ const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
+ const cnt={};recs.forEach(r=>cnt[r.status]=(cnt[r.status]||0)+1);
+ const freq={};recs.forEach(r=>{JD_DICT.forEach(([kw,key])=>{if(key!=="__none__"&&r.jd&&r.jd.includes(kw))freq[kw]=(freq[kw]||0)+1})});
+ const top=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,8);
+ let html='<h3 style="margin-top:14px">统计</h3><div class="chips">'+Object.entries(cnt).map(([k,v])=>'<span class="chip on">'+k+" × "+v+"</span>").join("")+"</div>";
+ if(top.length){html+='<h3>JD 高频关键词（按你投过的岗位统计，别凭感觉）</h3><div class="chips">'+top.map(([k,v])=>'<span class="chip">'+esc(k)+" × "+v+"</span>").join("")+"</div>";
+ html+='<div class="tip" style="margin-top:10px">备战建议：高频关键词里你没掌握的，去面试备战站对应标签加强——投递数据驱动复习优先级。</div>';}
+ html+='<table><tr><th>公司</th><th>岗位</th><th>日期</th><th>状态</th><th>操作</th></tr>';
+ recs.forEach((r,i)=>{html+="<tr><td>"+esc(r.co)+"</td><td>"+esc(r.role)+'</td><td>'+esc(r.date)+'</td><td><span class="tag '+(STC[r.status]||"投")+'">'+esc(r.status)+'</span></td><td><button class="ghost" style="padding:2px 10px;font-size:12px" onclick="delRec('+i+')">删</button></td></tr>'});
+ html+="</table>"+(recs.length?"":'<div class="small" style="margin-top:8px">暂无记录。</div>');
+ el("l-stats").innerHTML="";el("l-table").innerHTML=html;
+}
+/* 面试备战 */
+const BANK={
+agent:{points:["工作流打底 vs 全自主 Agent 的取舍（确定性编排+1 个 ReAct 节点）","function calling 与工具编排：定义/并行/错误回传","MCP 协议：工具/资源/提示三件套，和 function calling 的关系","上下文工程：长链路治理、记忆合并与冲突","RAG 全链路：切块/检索/重排，重点防对象错配","幻觉治理：阈值/代码级拒答/白名单等硬约束（约束放代码不放 prompt）","评测：常规用例挂 CI + 对抗用例 + 消融实验证明有效","Skill 按需加载 / 渐进式披露"],scene:["模型输出不可信，约束放模型层还是代码层？模型换成坏的还成立吗？","工具调用越权怎么防？","RAG 检索到错误对象，怎么定位归因？","评测集被污染了怎么办？","多轮对话记忆冲突怎么合并？","一次糟糕回答，怎么做 Trace 归因？","长任务上下文超限怎么治理？","你怎么证明防幻觉是有效的？（流量染色/假模型/逐道关约束）"],proj:["为什么用工作流打底，而不是整条链路都做自主 Agent？","模型换成坏的，你的防护还成立吗？","评测用例怎么选的？消融里关掉某个约束会发生什么？"]},
+be:{points:["MySQL 索引原理与慢查询优化","事务隔离级别与 MVCC","Redis：数据结构 + 穿透/击穿/雪崩三件套 + 双后端取舍","JWT 会话与 RBAC 权限设计","并发：线程/锁/线程池参数（能说出具体参数=做过）","HTTP/TCP 基础与 HTTPS","消息队列：可靠投递与幂等消费","分层架构与领域边界"],scene:["缓存和数据库不一致怎么处理？","接口被刷怎么限流？具体限流算法？","线上 CPU 飙高怎么排查？","消息丢了/重复消费怎么办？","库存超卖怎么防？","大表加索引怎么在线做？"],proj:["为什么这个接口加缓存、那个不加？代价是什么？","事务隔离级别选的哪档，为什么？","换数据库怎么做到业务代码零改动？"]},
+fe:{points:["闭包/原型链/事件循环","虚拟 DOM 与 diff 策略","状态管理选型与数据流设计","首屏性能：路由懒加载/资源优化/数字指标","跨域与 CORS 全解","组件设计与复用边界","浏览器渲染流程与重排重绘","工程化：Vite/打包产物分析"],scene:["首屏白屏怎么排查？","状态放全局还是局部，怎么判断？","大列表卡顿怎么优化？","打包体积暴涨怎么分析？","组件间通信有哪些方式，怎么选？"],proj:["为什么选这个状态管理方案？","首屏做了哪些优化，数字是多少？","跨域是怎么解决的？"]}};
+const TOPICS=JD_DICT.concat([["并发","__conc"],["线程","__conc"],["线程池","__conc"],["进程","__conc"],["锁","__conc"],["JVM","__jvm"],["GC","__jvm"],["索引","__idx"],["事务","__tx"],["MVCC","__tx"],["TCP","__net"],["HTTP","__net"],["三次握手","__net"],["HTTPS","__net"],["Kafka","__mq"],["RabbitMQ","__mq"],["RocketMQ","__mq"],["手撕","__algo"],["算法题","__algo"],["LRU","redis"],["秒杀","__scene"],["限流","__scene"],["幂等","__scene"],["分布式","__dist"],["CAP","__dist"],["八股","__bagu"]]);
+const TLABEL={__linux__:"Linux",__mq__:"消息队列",__ms__:"微服务",__es__:"Elasticsearch",__unity__:"Unity/C#",__ml__:"机器学习",__algo__:"算法",__conc__:"并发",__jvm__:"JVM",__idx__:"MySQL索引",__tx__:"事务",__net__:"网络",__scene__:"场景设计",__dist__:"分布式",__bagu__:"八股"};
+function dirBest(){
+ if(!profile)return "agent";const s=profile.skills||{};
+ const hits=DIRS.filter(d=>d.need.some(k=>s[k]));return hits.length?hits[0].id:"agent";
+}
+function renderPrep(){
+ const sel=el("b-dir");const best=dirBest();
+ if(document.activeElement!==sel)sel.value=best;
+ const d=BANK[sel.value]||BANK.agent;
+ const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
+ const freq={};const s=(profile&&profile.skills)||{};
+ recs.forEach(r=>{TOPICS.forEach(([kw,key])=>{if(key!=="__none__"&&r.jd&&r.jd.includes(kw))freq[key]=(freq[key]||0)+1})});
+ const gap=[...new Set(Object.entries(freq).filter(([k,v])=>TLABEL[k]&&v>=2).map(([k])=>TLABEL[k]))].slice(0,6);
+ let html="";
+ if(gap.length)html+='<div class="tip" style="margin-top:0">台账里出现 ≥2 次的考点（你投的岗位真实在考）：<b>'+gap.join(" / ")+"</b> —— 复习优先级以此为准，别凭感觉。</div>";
+ html+='<h3>必须掌握的知识点（'+el("b-dir").selectedOptions[0].text+'）</h3><ol class="road">'+d.points.map(x=>"<li>"+x+"</li>").join("")+"</ol>";
+ html+='<h3>面试官大概率会问的场景题</h3><ol class="road">'+d.scene.map(x=>"<li>"+x+"</li>").join("")+"</ol>";
+ html+='<h3>你的项目防御题（简历上写了就必须答得出）</h3><ol class="road">'+d.proj.map(x=>"<li>"+x+"</li>").join("");
+ const ps=projList();if(ps.length)ps.forEach(p=>{html+="<li>讲一下你做过的「"+esc(p.name)+"」：先讲核心设计，再主动补边界</li>"});
+ html+="</ol>";
+ html+='<div class="small">用法：知识点逐条过，场景题先自己答 30 秒再对照备战站；项目防御题答不出的，要么补齐要么别写进简历。</div>';
+ el("b-out").innerHTML=html;
+}
+function parseJing(){
+ const t=el("b-jing").value.trim();
+ if(!t){el("b-jingout").innerHTML='<div class="warn">先粘贴面经原文。</div>';return}
+ const lines=t.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+ const qs=lines.filter(l=>/[?？]/.test(l)||/^(Q\s*\d+|\d+\s*[\.、）)]|问\s*[:：])/.test(l));
+ const text=qs.join("\n");
+ const freq={};
+ TOPICS.forEach(([kw,key])=>{if(key!=="__none__"&&text.includes(kw))freq[TLABEL[key]||key]=(freq[TLABEL[key]||key]||0)+1});
+ const top=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,10);
+ let html="";
+ if(!qs.length){html+='<div class="warn">没抽到问句——面经里要带「？」或「1. 」开头的题目行。</div>'}
+ else{
+  if(top.length)html+='<h3>高频考点榜（按抽出的 '+qs.length+' 道题统计，别凭感觉排）</h3><div class="chips">'+top.map(([k,v])=>'<span class="chip on">'+esc(k)+" × "+v+"</span>").join("")+"</div>";
+  html+='<h3>抽出的题（全量列出，无截断）</h3><ol class="road">'+qs.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ol>";
+  html+='<div class="small">高频榜与「备考清单」对照着看：高频但你答不出的 = 最优先补。新题直接补进备战站对应标签。</div>';
+ }
+ el("b-jingout").innerHTML=html;
+}
+/* 能力推断 + 补强计划 */
+const ALIAS=[["Python","py"],["FastAPI","fastapi"],["LangGraph","langgraph"],["LangChain","langgraph"],["RAG","rag"],["MCP","mcp"],["React","react"],["Vue","vue"],["Node","node"],["Express","node"],["MySQL","mysql"],["SQLite","sqlite"],["Redis","redis"],["Docker","docker"],["pytest","test"],["Jest","test"],["Git","git"],["JavaScript","js"],["TypeScript","js"],["JWT","node"]];
+const ADJ={agent:["mysql","redis","docker","test"],be:["redis","docker","git","test"],fe:["node","test","mysql"]};
+function renderInfer(){
+ const box=el("p-infer");if(!box)return;
+ const txt=(profile&&profile.projects)||"";const s=(profile&&profile.skills)||{};
+ const inf=ALIAS.filter(([kw,k])=>!s[k]&&txt.includes(kw)).map(([kw,k])=>k);
+ if(!inf.length){box.innerHTML="";return}
+ box.innerHTML='<label>从你的项目描述里推断你可能还会（点击确认 → 自动勾选进技能）</label><div class="chips">'+inf.map(k=>{const lb=(SKILLS.find(x=>x[0]===k)||["",k])[1];return '<div class="chip" onclick="confirmInfer(\''+k+'\')">'+lb+" ＋</div>"}).join("")+"</div>";
+}
+function confirmInfer(k){
+ profile.skills[k]=1;localStorage.setItem("pipeline_profile",JSON.stringify(profile));
+ document.querySelectorAll("#p-skills .chip").forEach(c=>c.classList.toggle("on",!!profile.skills[c.dataset.k]));
+ renderInfer();renderDirs();
+}
+function renderPlan(){
+ const box=el("d-plan");if(!box)return;
+ if(!profile||Object.keys(profile.skills||{}).length===0){box.innerHTML='<span class="small">先在「我的画像」勾技能并保存。</span>';return}
+ const s=profile.skills||{};const best=dirBest();
+ const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
+ const freq={};recs.forEach(r=>{TOPICS.forEach(([kw,key])=>{if(key!=="__none__"&&r.jd&&r.jd.includes(kw))freq[key]=(freq[key]||0)+1})});
+ const strength=[];Object.entries(freq).forEach(([k])=>{if(TLABEL[k])strength.push(TLABEL[k]);else if(!s[k])strength.push((SKILLS.find(x=>x[0]===k)||["",k])[1])});
+ const uniq=[...new Set(strength)].slice(0,6);
+ const adj=(ADJ[best]||[]).filter(k=>!s[k]).map(k=>(SKILLS.find(x=>x[0]===k)||["",""])[1]);
+ const news=DIRS.filter(d=>d.id!==best&&!d.need.some(k=>s[k]));
+ let html="<h3>① 加强（你投的岗位在考、画像里没有的）</h3>";
+ html+=uniq.length?'<div class="chips">'+uniq.map(x=>'<span class="chip on">'+esc(x)+"</span>").join("")+'</div><div class="small">对应知识点和题目去「面试备战」标签逐条过；确认已掌握的就去画像勾上。</div>':'<div class="small">暂无数据——在「JD 分析」多分析几个岗位、台账多记几条 JD，这里会自动长出来。</div>';
+ html+="<h3>② 拓展（相邻技能，学完性价比最高）</h3>";
+ html+=adj.length?'<div class="chips">'+adj.map(x=>'<span class="chip">'+esc(x)+"</span>").join("")+"</div>":'<div class="small">当前方向的相邻技能你都已覆盖，直接冲新方向。</div>';
+ html+="<h3>③ 新项目（解锁还没覆盖的方向）</h3>";
+ html+=news.length?'<ol class="road">'+news.map(d=>"<li><b>"+d.name+"</b>："+esc(d.why)+"（路线图见上）</li>").join("")+"</ol>":'<div class="small">技能已覆盖全部方向——把现有项目打磨深，比铺新项目值钱。</div>';
+ box.innerHTML=html;
+}
+/* 简历直填包 */
+function monthNow(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")}
+function copyText(id){navigator.clipboard.writeText(el(id).textContent).then(()=>{},()=>{})}
+function genPack(){
+ if(!profile){el("v-out").innerHTML='<div class="warn">请先保存画像。</div>';return}
+ const ps=projList();
+ if(!ps.length){el("v-out").innerHTML='<div class="warn">先在画像里按「项目名｜描述｜链接｜起始年月」填至少一个项目。</div>';return}
+ const g=profile.grade||"2028";const eduStart=(parseInt(g,10)-4)+".09-"+g+".06";
+ const bossProj=ps.map((p,i)=>"— 项目 "+(i+1)+" —\n项目名称："+p.name+"\n担任角色：独立开发者\n项目时间："+(p.start||"【起始年月，如 2026.03】")+" 至今\n项目内容："+(p.desc||"【项目做了什么，3-5 句】")+"\n项目业绩：【按实际填可验证的量化结果（测试条数/评测用例数/性能数字）；没有量化就写工程实践，别编】\n项目链接："+(p.link||"【GitHub 链接】")).join("\n\n");
+ const sk=SKILLS.filter(([k])=>profile.skills&&profile.skills[k]).map(([,l])=>l);
+ const adv=[];
+ if(sk.length)adv.push("技术栈："+sk.slice(0,6).join(" / ")+"，均有可运行的开源项目支撑");
+ ps.slice(0,2).forEach(p=>adv.push("独立开发 "+p.name+"："+(p.desc||"")+(p.link?"（GitHub 可直接 clone 验证）":"")));
+ if(profile.skills&&profile.skills.git&&profile.skills.test)adv.push("工程习惯：全量自动化测试 + 版本管理，产出可复现、可验证");
+ if(profile.skills&&profile.skills.aitools)adv.push("设计决策与代码验收由本人把关，AI 承担提效");
+ while(adv.length<5)adv.push("【自己补一条真实优势：课设/竞赛/自学经历，没做过的不写】");
+ const edu="学校："+(profile.school||"【学校】")+"\n专业："+(profile.major||"计算机科学与技术")+"\n学历：本科\n在校时间："+eduStart;
+ const internBlocks=(profile.intern||"").split(/\n+/).map(l=>l.trim()).filter(Boolean).map(l=>{const a=l.split(/[｜|]/);return "— 实习经历 —\n公司："+(a[0]||"").trim()+"\n担任职位："+(a[1]||"").trim()+"\n任职时间："+((a[2]||"").trim()||"【起止年月】")+"\n经历描述："+((a[3]||"").trim()||"【做了什么，用可验证事实】")}).join("\n\n");
+ const xjProj=ps.map(p=>"— 学术经历（项目）—\n项目名称："+p.name+"\n担任职位：独立开发者\n任职时间："+(p.start?p.start.replace(/\./g,"-"):"【起始年月】")+" 至 "+monthNow()+"（实习僧结束月份只能选到当前月）\n经历描述："+(p.desc||"")+(p.link?"\n项目链接："+p.link:"")).join("\n\n");
+ const secs=[["BOSS 项目经历",bossProj],["BOSS 个人优势（5 条）",adv.map((x,i)=>(i+1)+". "+x).join("\n")],["BOSS 教育经历",edu],["实习僧 学术经历（项目）",xjProj]];
+ if(internBlocks)secs.push(["实习僧 学术经历（实习）",internBlocks]);
+ el("v-out").innerHTML=secs.map((s,i)=>'<h3 style="margin-top:14px">'+s[0]+'</h3><div class="out" id="pack'+i+'">'+esc(s[1])+'</div><div style="margin-top:6px"><button class="ghost" onclick="copyText(\'pack'+i+'\')">复制这一块</button></div>').join("");
+}
+/* 本地服务联动（面经抓取 + AI 润色） */
+const SVC="http://127.0.0.1:8321";
+async function svcFetchJing(){
+ const u=el("b-url").value.trim();
+ if(!u){el("b-jingout").innerHTML='<div class="warn">先粘贴牛客面经链接。</div>';return}
+ try{
+  const r=await fetch(SVC+"/api/fetch_nowcoder?url="+encodeURIComponent(u));
+  const j=await r.json();
+  if(j.ok){el("b-jing").value=j.text;parseJing()}
+  else el("b-jingout").innerHTML='<div class="warn">'+esc(j.msg)+"</div>";
+ }catch(e){el("b-jingout").innerHTML='<div class="warn">连不上本地服务：双击 Desktop 上的 start-pipeline.bat 启动后再试。</div>'}
+}
+async function aiPolish(){
+ const g=el("greet");
+ if(!g){alert("请先生成打招呼初稿");return}
+ const sys="你是求职打招呼文案助手。铁律：1.绝不出现学校名；2.绝不提用户没写过的技能；3.不自我贬低、不画蛇添足；4.口语自然，120 字内；5.结尾留一句钩子引导回复。";
+ const prompt="我的画像："+JSON.stringify(profile)+"\n岗位JD："+el("j-jd").value.slice(0,800)+"\n初稿：\n"+g.textContent+"\n请润色这条打招呼语，只输出最终文案，不要解释。";
+ try{
+  const r=await fetch(SVC+"/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system:sys,prompt:prompt})});
+  const j=await r.json();
+  if(j.ok)g.textContent=j.text;
+  else el("j-out").innerHTML+='<div class="warn">'+esc(j.msg)+"</div>";
+ }catch(e){alert("连不上本地服务：先双击 Desktop 上的 start-pipeline.bat")}
+}
+initSkills();loadProfile();renderLedger();renderPrep();renderPlan();
+</script>
+</body>
+</html>
