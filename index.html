@@ -225,10 +225,10 @@ function analyzeJD(){
  if(!profile){el("j-out").innerHTML='<div class="warn">请先在「我的画像」保存基本信息。</div>';return}
  const jd=el("j-jd").value,role=el("j-role").value.trim()||"该岗位",who=el("j-who").value;
  if(!jd.trim()){el("j-out").innerHTML='<div class="warn">请粘贴 JD 全文。</div>';return}
- const found=new Set();JD_DICT.forEach(([kw,key])=>{if(jd.includes(kw))found.add(key)});
+ const found=new Set();TOPICS.forEach(([kw,key])=>{if(jd.includes(kw))found.add(key)});
  const s=profile.skills||{};
  const match=[...found].filter(k=>k!=="__none__"&&!k.startsWith("__")&&s[k]);
- const gapTopic=[...found].filter(k=>k.startsWith("__")&&k!=="__none__").map(k=>({__linux__:"Linux",__mq__:"消息队列",__ms__:"微服务",__es__:"Elasticsearch",__unity__:"Unity/C#",__ml__:"机器学习/深度学习",__algo__:"算法"}[k]));
+ const gapTopic=[...new Set([...found].filter(k=>k.startsWith("__")&&k!=="__none__").map(topicLabel))];
  const gapSkill=[...found].filter(k=>k!=="__none__"&&!k.startsWith("__")&&!s[k]).map(k=>(SKILLS.find(x=>x[0]===k)||["",""])[1]);
  const projs=projList();
  let greet=(who==="hr"?"您好":"老师好")+"，我是"+(profile.grade||"__届")+"届"+(profile.major||"__专业")+"在读"+(profile.name||"__")+"，看到贵司「"+role+"」岗位与我的方向很匹配：\n";
@@ -276,8 +276,9 @@ const BANK={
 agent:{points:["工作流打底 vs 全自主 Agent 的取舍（确定性编排+1 个 ReAct 节点）","function calling 与工具编排：定义/并行/错误回传","MCP 协议：工具/资源/提示三件套，和 function calling 的关系","上下文工程：长链路治理、记忆合并与冲突","RAG 全链路：切块/检索/重排，重点防对象错配","幻觉治理：阈值/代码级拒答/白名单等硬约束（约束放代码不放 prompt）","评测：常规用例挂 CI + 对抗用例 + 消融实验证明有效","Skill 按需加载 / 渐进式披露"],scene:["模型输出不可信，约束放模型层还是代码层？模型换成坏的还成立吗？","工具调用越权怎么防？","RAG 检索到错误对象，怎么定位归因？","评测集被污染了怎么办？","多轮对话记忆冲突怎么合并？","一次糟糕回答，怎么做 Trace 归因？","长任务上下文超限怎么治理？","你怎么证明防幻觉是有效的？（流量染色/假模型/逐道关约束）"],proj:["为什么用工作流打底，而不是整条链路都做自主 Agent？","模型换成坏的，你的防护还成立吗？","评测用例怎么选的？消融里关掉某个约束会发生什么？"]},
 be:{points:["MySQL 索引原理与慢查询优化","事务隔离级别与 MVCC","Redis：数据结构 + 穿透/击穿/雪崩三件套 + 双后端取舍","JWT 会话与 RBAC 权限设计","并发：线程/锁/线程池参数（能说出具体参数=做过）","HTTP/TCP 基础与 HTTPS","消息队列：可靠投递与幂等消费","分层架构与领域边界"],scene:["缓存和数据库不一致怎么处理？","接口被刷怎么限流？具体限流算法？","线上 CPU 飙高怎么排查？","消息丢了/重复消费怎么办？","库存超卖怎么防？","大表加索引怎么在线做？"],proj:["为什么这个接口加缓存、那个不加？代价是什么？","事务隔离级别选的哪档，为什么？","换数据库怎么做到业务代码零改动？"]},
 fe:{points:["闭包/原型链/事件循环","虚拟 DOM 与 diff 策略","状态管理选型与数据流设计","首屏性能：路由懒加载/资源优化/数字指标","跨域与 CORS 全解","组件设计与复用边界","浏览器渲染流程与重排重绘","工程化：Vite/打包产物分析"],scene:["首屏白屏怎么排查？","状态放全局还是局部，怎么判断？","大列表卡顿怎么优化？","打包体积暴涨怎么分析？","组件间通信有哪些方式，怎么选？"],proj:["为什么选这个状态管理方案？","首屏做了哪些优化，数字是多少？","跨域是怎么解决的？"]}};
-const TOPICS=JD_DICT.concat([["并发","__conc"],["线程","__conc"],["线程池","__conc"],["进程","__conc"],["锁","__conc"],["JVM","__jvm"],["GC","__jvm"],["索引","__idx"],["事务","__tx"],["MVCC","__tx"],["TCP","__net"],["HTTP","__net"],["三次握手","__net"],["HTTPS","__net"],["Kafka","__mq"],["RabbitMQ","__mq"],["RocketMQ","__mq"],["手撕","__algo"],["算法题","__algo"],["LRU","redis"],["秒杀","__scene"],["限流","__scene"],["幂等","__scene"],["分布式","__dist"],["CAP","__dist"],["八股","__bagu"]]);
-const TLABEL={__linux__:"Linux",__mq__:"消息队列",__ms__:"微服务",__es__:"Elasticsearch",__unity__:"Unity/C#",__ml__:"机器学习",__algo__:"算法",__conc__:"并发",__jvm__:"JVM",__idx__:"MySQL索引",__tx__:"事务",__net__:"网络",__scene__:"场景设计",__dist__:"分布式",__bagu__:"八股"};
+const TOPICS=JD_DICT.concat([["并发","__conc__"],["线程","__conc__"],["线程池","__conc__"],["进程","__conc__"],["锁","__conc__"],["JVM","__jvm__"],["GC","__jvm__"],["索引","__idx__"],["事务","__tx__"],["MVCC","__tx__"],["TCP","__net__"],["HTTP","__net__"],["三次握手","__net__"],["HTTPS","__net__"],["Kafka","__mq__"],["RabbitMQ","__mq__"],["RocketMQ","__mq__"],["手撕","__algo__"],["算法题","__algo__"],["LRU","redis"],["秒杀","__scene__"],["限流","__scene__"],["幂等","__scene__"],["分布式","__dist__"],["CAP","__dist__"],["八股","__bagu__"]]);
+const TLABEL={__linux__:"Linux",__docker__:"容器/K8s",__mq__:"消息队列",__ms__:"微服务",__es__:"Elasticsearch",__unity__:"Unity/C#",__ml__:"机器学习",__algo__:"算法",__conc__:"并发",__jvm__:"JVM",__idx__:"MySQL索引",__tx__:"事务",__net__:"网络",__scene__:"场景设计",__dist__:"分布式",__bagu__:"八股"};
+function topicLabel(k){return TLABEL[k]||(SKILLS.find(x=>x[0]===k)||["",k])[1]}
 function dirBest(){
  if(!profile)return "agent";const s=profile.skills||{};
  const hits=DIRS.filter(d=>d.need.some(k=>s[k]));return hits.length?hits[0].id:"agent";
@@ -307,7 +308,7 @@ function parseJing(){
  const qs=lines.filter(l=>/[?？]/.test(l)||/^(Q\s*\d+|\d+\s*[\.、）)]|问\s*[:：])/.test(l));
  const text=qs.join("\n");
  const freq={};
- TOPICS.forEach(([kw,key])=>{if(key!=="__none__"&&text.includes(kw))freq[TLABEL[key]||key]=(freq[TLABEL[key]||key]||0)+1});
+ TOPICS.forEach(([kw,key])=>{if(key!=="__none__"&&text.includes(kw)){const lb=topicLabel(key);freq[lb]=(freq[lb]||0)+1}});
  const top=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,10);
  let html="";
  if(!qs.length){html+='<div class="warn">没抽到问句——面经里要带「？」或「1. 」开头的题目行。</div>'}
@@ -339,7 +340,7 @@ function renderPlan(){
  const s=profile.skills||{};const best=dirBest();
  const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
  const freq={};recs.forEach(r=>{TOPICS.forEach(([kw,key])=>{if(key!=="__none__"&&r.jd&&r.jd.includes(kw))freq[key]=(freq[key]||0)+1})});
- const strength=[];Object.entries(freq).forEach(([k])=>{if(TLABEL[k])strength.push(TLABEL[k]);else if(!s[k])strength.push((SKILLS.find(x=>x[0]===k)||["",k])[1])});
+ const strength=[];Object.entries(freq).forEach(([k])=>{if(TLABEL[k])strength.push(TLABEL[k]);else if(!s[k])strength.push(topicLabel(k))});
  const uniq=[...new Set(strength)].slice(0,6);
  const adj=(ADJ[best]||[]).filter(k=>!s[k]).map(k=>(SKILLS.find(x=>x[0]===k)||["",""])[1]);
  const news=DIRS.filter(d=>d.id!==best&&!d.need.some(k=>s[k]));
