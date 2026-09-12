@@ -61,6 +61,8 @@ ol.road{padding-left:20px}ol.road li{margin:6px 0}
 </div>
 <div class="wrap">
 
+<div id="toast" style="position:fixed;left:50%;bottom:36px;transform:translateX(-50%);background:#065f46;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:80%"></div>
+
 <!-- 画像 -->
 <div id="t-p">
   <div class="card">
@@ -126,6 +128,17 @@ ol.road{padding-left:20px}ol.road li{margin:6px 0}
     <textarea id="l-jd" rows="2"></textarea>
     <div id="l-stats"></div>
     <div id="l-table"></div>
+  </div>
+  <div class="card">
+    <h2>数据备份（重要）</h2>
+    <div class="tip" style="margin-bottom:12px">画像和台账只存在本机浏览器，清理浏览器数据会一并丢失。定期导出备份，换设备/换浏览器也能恢复。</div>
+    <div class="flex">
+      <button onclick="exportData()">导出备份 JSON</button>
+      <button class="ghost" onclick="el('import-file').click()">导入备份</button>
+      <button class="ghost" onclick="clearData()">清空全部数据</button>
+      <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="onImportFile(this)">
+    </div>
+    <div id="backup-msg"></div>
   </div>
 </div>
 
@@ -238,34 +251,129 @@ function analyzeJD(){
  greet+="期待有机会与您沟通。";
  let html='<h3 style="margin-top:16px">JD 关键词命中（画像内，可写进招呼语）</h3><div class="chips">'+(match.map(k=>'<span class="chip on">'+(SKILLS.find(x=>x[0]===k)||["",""])[1]+"</span>").join("")||'<span class="small">无</span>')+"</div>";
  if(gapTopic.length||gapSkill.length)html+='<h3>缺口（<b style="color:#b91c1c">只标注不代填</b>，招呼语里已自动排除）</h3><div class="chips">'+[...gapSkill,...gapTopic].map(x=>'<span class="chip">'+esc(x)+"</span>").join("")+"</div>"+'<div class="small">补法建议：缺口若为表达类（其实做过没写清）→ 补进项目描述；若为能力类 → 走「项目方向推荐」里对应路线补齐，别硬写。</div>';
- html+='<h3>打招呼初稿（直接可复制，最后一句钩子自己加）</h3><div class="out" id="greet">'+esc(greet)+'</div><div style="margin-top:10px"><button onclick="copyGreet()">复制招呼语</button> <button class="ghost" onclick="aiPolish()">AI 润色（需本地服务+Key）</button> <button class="ghost" onclick="toLedger()">记入投递台账</button></div>';
+ html+='<h3>打招呼初稿（直接可复制，最后一句钩子自己加）</h3><div class="out" id="greet">'+esc(greet)+'</div><div class="small" id="greet-count"></div><div style="margin-top:10px"><button onclick="copyGreet()">复制招呼语</button> <button class="ghost" onclick="aiPolish()">AI 润色（需本地服务+Key）</button> <button class="ghost" onclick="toLedger()">记入投递台账</button></div>';
  el("j-out").innerHTML=html;
+ el("greet-count").textContent="当前 "+greetLength()+" 字（含换行）。招呼语越短越容易被读完，建议控制在 200 字内。";
 }
-function copyGreet(){const t=el("greet").textContent;navigator.clipboard.writeText(t).then(()=>{},()=>{})}
+function copyGreet(){
+ const t=el("greet").textContent;
+ copyToClipboard(t).then(r=>msg(r.ok?"招呼语已复制，去平台粘贴即可":"复制失败，请手动选中文字复制",r.ok));
+}
+function switchTab(name){
+ document.querySelectorAll('.tab[data-t="'+name+'"]').forEach(t=>t.click());
+}
+function msg(text,ok){
+ const box=el("toast");
+ box.textContent=text;
+ box.style.background=ok?"#065f46":"#991b1b";
+ box.style.opacity="1";
+ if(_toastTimer)clearTimeout(_toastTimer);
+ _toastTimer=setTimeout(()=>{box.style.opacity="0"},2200);
+ if(_toastTimer&&_toastTimer.unref)_toastTimer.unref();
+ return text;
+}
+let _toastTimer=null;
+function copyToClipboard(text){
+ if(navigator.clipboard&&navigator.clipboard.writeText){
+  return navigator.clipboard.writeText(text).then(()=>({ok:true}),()=>({ok:false}));
+ }
+ return Promise.resolve({ok:false});
+}
 function toLedger(){
  const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
  recs.unshift({co:el("j-co").value.trim(),role:el("j-role").value.trim(),date:new Date().toISOString().slice(0,10),status:el("j-status").value||"已投递",jd:el("j-jd").value.trim().slice(0,500)});
  localStorage.setItem("pipeline_ledger",JSON.stringify(recs));renderLedger();
- document.querySelectorAll(".tab")[3].click();
+ switchTab("l");
+ return recs.length;
+}
+/* 数据备份：localStorage 会随浏览器数据一起消失，必须能导出 */
+function buildBackup(){
+ return JSON.stringify({
+  app:"offer-pipeline",
+  version:2,
+  exportedAt:new Date().toISOString(),
+  profile:JSON.parse(localStorage.getItem("pipeline_profile")||"null"),
+  ledger:JSON.parse(localStorage.getItem("pipeline_ledger")||"[]")
+ },null,2);
+}
+function exportData(){
+ const json=buildBackup();
+ try{
+  const blob=new Blob([json],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="offer-pipeline-backup-"+new Date().toISOString().slice(0,10)+".json";
+  a.click();
+  el("backup-msg").innerHTML='<div class="ok">已导出备份文件（'+json.length+' 字节），请存到你自己的云盘或邮箱。</div>';
+ }catch(e){
+  el("backup-msg").innerHTML='<div class="warn">当前环境不支持自动下载，请手动复制下方内容保存为 .json 文件。</div><div class="out" id="backup-raw">'+esc(json)+"</div>";
+ }
+ return json;
+}
+function importData(text){
+ let data;
+ try{data=JSON.parse(text)}catch(e){return {ok:false,msg:"文件不是合法 JSON，导入已取消"}}
+ if(!data||typeof data!=="object")return {ok:false,msg:"备份内容为空，导入已取消"};
+ if(data.profile===undefined&&data.ledger===undefined)return {ok:false,msg:"这不是本工具的备份文件（缺少 profile / ledger 字段）"};
+ if(data.profile!==undefined){
+  if(data.profile===null)localStorage.removeItem("pipeline_profile");
+  else localStorage.setItem("pipeline_profile",JSON.stringify(data.profile));
+ }
+ if(data.ledger!==undefined)localStorage.setItem("pipeline_ledger",JSON.stringify(data.ledger));
+ loadProfile();renderLedger();renderPrep();renderPlan();renderInfer();
+ const n=Array.isArray(data.ledger)?data.ledger.length:0;
+ return {ok:true,msg:"导入完成：画像 "+(data.profile?"已恢复":"空")+"，台账 "+n+" 条"};
+}
+function onImportFile(input){
+ const f=input.files&&input.files[0];
+ if(!f)return;
+ const rd=new FileReader();
+ rd.onload=()=>{
+  const r=importData(String(rd.result||""));
+  el("backup-msg").innerHTML='<div class="'+(r.ok?"ok":"warn")+'">'+esc(r.msg)+"</div>";
+ };
+ rd.readAsText(f);
+ input.value="";
+}
+function clearData(){
+ if(!confirm("确定清空全部数据（画像 + 投递台账）？此操作不可撤销，建议先导出备份。"))return {ok:false,msg:"已取消"};
+ localStorage.removeItem("pipeline_profile");localStorage.removeItem("pipeline_ledger");
+ if(typeof location!=="undefined"&&location.reload)location.reload();
+ return {ok:true,msg:"已清空"};
 }
 /* 台账 */
 function addRecord(){
- if(!el("l-co").value.trim()&&!el("l-role").value.trim())return;
+ if(!el("l-co").value.trim()&&!el("l-role").value.trim()){msg("公司和岗位至少填一个",false);return 0}
  const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
- recs.unshift({co:el("l-co").value.trim(),role:el("l-role").value.trim(),date:el("l-date").value,status:el("l-status").value,jd:el("l-jd").value.trim().slice(0,500)});
+ recs.unshift({co:el("l-co").value.trim(),role:el("l-role").value.trim(),date:el("l-date").value||new Date().toISOString().slice(0,10),status:el("l-status").value,jd:el("l-jd").value.trim().slice(0,500)});
  localStorage.setItem("pipeline_ledger",JSON.stringify(recs));
  el("l-co").value="";el("l-role").value="";el("l-jd").value="";renderLedger();
+ msg("已加入台账",true);
+ return recs.length;
 }
+function greetLength(){return el("greet")?el("greet").textContent.length:0}
 function delRec(i){const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");recs.splice(i,1);localStorage.setItem("pipeline_ledger",JSON.stringify(recs));renderLedger()}
+/* 台账考点统计：唯一入口，landing 到「考点」而不是「关键词出现次数」 */
+function ledgerTopicFreq(){
+ const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
+ const freq={};
+ recs.forEach(r=>{
+  const seen=new Set();
+  TOPICS.forEach(([kw,key])=>{if(key!=="__none__"&&r.jd&&r.jd.includes(kw))seen.add(key)});
+  if(seen.has("__idx__"))seen.delete("mysql");
+  seen.forEach(k=>{freq[k]=(freq[k]||0)+1});
+ });
+ return freq;
+}
 const STC={"已投递":"投","已读未回":"读","约面":"面","不合适":"挂","挂了":"挂","准备投":"投"};
 function renderLedger(){
  const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
  const cnt={};recs.forEach(r=>cnt[r.status]=(cnt[r.status]||0)+1);
- const freq={};recs.forEach(r=>{JD_DICT.forEach(([kw,key])=>{if(key!=="__none__"&&r.jd&&r.jd.includes(kw))freq[kw]=(freq[kw]||0)+1})});
+ const freq={};Object.entries(ledgerTopicFreq()).forEach(([k,v])=>{const lb=topicLabel(k);freq[lb]=(freq[lb]||0)+v});
  const top=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,8);
- let html='<h3 style="margin-top:14px">统计</h3><div class="chips">'+Object.entries(cnt).map(([k,v])=>'<span class="chip on">'+k+" × "+v+"</span>").join("")+"</div>";
- if(top.length){html+='<h3>JD 高频关键词（按你投过的岗位统计，别凭感觉）</h3><div class="chips">'+top.map(([k,v])=>'<span class="chip">'+esc(k)+" × "+v+"</span>").join("")+"</div>";
- html+='<div class="tip" style="margin-top:10px">备战建议：高频关键词里你没掌握的，去面试备战站对应标签加强——投递数据驱动复习优先级。</div>';}
+ let html='<h3 style="margin-top:14px">统计</h3><div class="chips">'+Object.entries(cnt).map(([k,v])=>'<span class="chip on">'+esc(k)+" × "+v+"</span>").join("")+"</div>";
+ if(top.length){html+='<h3>JD 高频考点（按你投过的岗位统计，别凭感觉）</h3><div class="chips">'+top.map(([k,v])=>'<span class="chip">'+esc(k)+" × "+v+"</span>").join("")+"</div>";
+ html+='<div class="tip" style="margin-top:10px">备战建议：高频考点里你没掌握的，去「面试备战」标签对应清单加强——投递数据驱动复习优先级。</div>';}
  html+='<table><tr><th>公司</th><th>岗位</th><th>日期</th><th>状态</th><th>操作</th></tr>';
  recs.forEach((r,i)=>{html+="<tr><td>"+esc(r.co)+"</td><td>"+esc(r.role)+'</td><td>'+esc(r.date)+'</td><td><span class="tag '+(STC[r.status]||"投")+'">'+esc(r.status)+'</span></td><td><button class="ghost" style="padding:2px 10px;font-size:12px" onclick="delRec('+i+')">删</button></td></tr>'});
  html+="</table>"+(recs.length?"":'<div class="small" style="margin-top:8px">暂无记录。</div>');
@@ -338,8 +446,7 @@ function renderPlan(){
  const box=el("d-plan");if(!box)return;
  if(!profile||Object.keys(profile.skills||{}).length===0){box.innerHTML='<span class="small">先在「我的画像」勾技能并保存。</span>';return}
  const s=profile.skills||{};const best=dirBest();
- const recs=JSON.parse(localStorage.getItem("pipeline_ledger")||"[]");
- const freq={};recs.forEach(r=>{TOPICS.forEach(([kw,key])=>{if(key!=="__none__"&&r.jd&&r.jd.includes(kw))freq[key]=(freq[key]||0)+1})});
+ const freq=ledgerTopicFreq();
  const strength=[];Object.entries(freq).forEach(([k])=>{if(TLABEL[k])strength.push(TLABEL[k]);else if(!s[k])strength.push(topicLabel(k))});
  const uniq=[...new Set(strength)].slice(0,6);
  const adj=(ADJ[best]||[]).filter(k=>!s[k]).map(k=>(SKILLS.find(x=>x[0]===k)||["",""])[1]);
@@ -354,7 +461,9 @@ function renderPlan(){
 }
 /* 简历直填包 */
 function monthNow(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")}
-function copyText(id){navigator.clipboard.writeText(el(id).textContent).then(()=>{},()=>{})}
+function copyText(id){
+ copyToClipboard(el(id).textContent).then(r=>msg(r.ok?"已复制该文本块":"复制失败，请手动选中复制",r.ok));
+}
 function genPack(){
  if(!profile){el("v-out").innerHTML='<div class="warn">请先保存画像。</div>';return}
  const ps=projList();

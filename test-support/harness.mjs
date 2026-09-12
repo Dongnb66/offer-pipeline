@@ -11,7 +11,7 @@ const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
 if (!scriptMatch) throw new Error("index.html 中未找到 <script> 块");
 
-export function loadApp() {
+export function loadApp(opts = {}) {
   const elems = new Map();
 
   // 桩 DOM 不解析 HTML：在 innerHTML 被赋值时把其中带 id 的子块注册成可查询元素，
@@ -47,6 +47,13 @@ export function loadApp() {
     return el;
   }
 
+  // 检索桩：返回匹配的元素数组（测试里不渲染真实 DOM，只返回已注册的元素）
+  function querySelectorAllStub(sel) {
+    const m = /data-t="([a-z]+)"/.exec(sel || "");
+    if (m) return [documentStub.getElementById("tab-" + m[1])];
+    return [];
+  }
+
   const store = new Map();
 
   const documentStub = {
@@ -54,7 +61,7 @@ export function loadApp() {
       if (!elems.has(id)) elems.set(id, makeEl());
       return elems.get(id);
     },
-    querySelectorAll() { return []; },
+    querySelectorAll: querySelectorAllStub,
     createElement() { return makeEl(); },
     activeElement: null
   };
@@ -67,19 +74,21 @@ export function loadApp() {
 
   const navigatorStub = { clipboard: { writeText: async () => {} } };
   const alertStub = () => {};
+  const confirmStub = () => opts.confirmResult !== false;
   const fetchStub = async () => { throw new Error("测试环境未启用本地服务"); };
 
   const body = scriptMatch[1] + "\n;return {" +
     "projList,dirBest,renderPlan,renderInfer,confirmInfer,genPack,parseJing,analyzeJD," +
-    "renderLedger,renderDirs,renderPrep,esc,monthNow,SKILLS,DIRS,JD_DICT,TOPICS,ALIAS,ADJ," +
+    "renderLedger,renderDirs,renderPrep,loadProfile,saveProfile,esc,monthNow,SKILLS,DIRS,JD_DICT,TOPICS,ALIAS,ADJ," +
+    "addRecord,buildBackup,importData,clearData,copyToClipboard,greetLength,switchTab,msg,toLedger," +
     "setProfile:(p)=>{profile=p},getProfile:()=>profile,el:el};";
 
   const factory = new Function(
-    "document", "localStorage", "navigator", "alert", "fetch", "window",
+    "document", "localStorage", "navigator", "alert", "confirm", "fetch", "window",
     body
   );
 
-  const api = factory(documentStub, localStorageStub, navigatorStub, alertStub, fetchStub, {});
+  const api = factory(documentStub, localStorageStub, navigatorStub, alertStub, confirmStub, fetchStub, {});
   return { ...api, elems, store };
 }
 

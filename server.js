@@ -14,8 +14,16 @@ function stripHtml(t){
     .replace(/[ \t]{2,}/g," ")
     .replace(/\n{3,}/g,"\n\n").trim();
 }
+function isNowcoderUrl(url){
+  try{
+    const h=new URL(String(url||"")).hostname.toLowerCase();
+    return h==="nowcoder.com"||h.endsWith(".nowcoder.com");
+  }catch(e){return false}
+}
+function parseNowcoderId(url){ const m=String(url||"").match(/discuss\/(\d+)/); return m?m[1]:null }
 function send(res,obj){res.setHeader("Content-Type","application/json; charset=utf-8");res.end(JSON.stringify(obj))}
 function loadLLM(){try{return JSON.parse(fs.readFileSync(path.join(__dirname,"llm.json"),"utf8"))}catch(e){return null}}
+const MAX_BODY=100*1024;
 const server=http.createServer(async(req,res)=>{
   res.setHeader("Access-Control-Allow-Origin","*");
   res.setHeader("Access-Control-Allow-Headers","Content-Type");
@@ -25,11 +33,11 @@ const server=http.createServer(async(req,res)=>{
   if(u.pathname==="/api/ping"){send(res,{ok:true});return}
   if(u.pathname==="/api/fetch_nowcoder"){
     const url=u.searchParams.get("url")||"";
-    if(!/nowcoder\.com/.test(url)){send(res,{ok:false,msg:"只支持牛客链接"});return}
-    const m=url.match(/discuss\/(\d+)/);
-    if(!m){send(res,{ok:false,msg:"只支持 discuss 链接。exam 页在登录态抓不到、feed 页不 SSR——这是实测结论，请直接复制粘贴面经原文。"});return}
+    if(!isNowcoderUrl(url)){send(res,{ok:false,msg:"只支持牛客链接"});return}
+    const id=parseNowcoderId(url);
+    if(!id){send(res,{ok:false,msg:"只支持 discuss 链接。exam 页在登录态抓不到、feed 页不 SSR——这是实测结论，请直接复制粘贴面经原文。"});return}
     try{
-      const r=await fetch("https://m.nowcoder.com/discuss/"+m[1],{headers:{"User-Agent":UA}});
+      const r=await fetch("https://m.nowcoder.com/discuss/"+id,{headers:{"User-Agent":UA}});
       const html=await r.text();
       const text=stripHtml(html);
       if(text.length<200){send(res,{ok:false,msg:"抓到的正文太短（可能需登录或页面改版），请直接复制粘贴面经原文。"});return}
@@ -38,12 +46,17 @@ const server=http.createServer(async(req,res)=>{
     return;
   }
   if(u.pathname==="/api/ai"&&req.method==="POST"){
-    let body="";req.on("data",c=>body+=c);
+    let body="";
+    req.on("data",c=>{
+      body+=c;
+      if(body.length>MAX_BODY){send(res,{ok:false,msg:"请求体过大（上限 100KB）"});req.destroy()}
+    });
     req.on("end",async()=>{
       const cfg=loadLLM();
       if(!cfg||!cfg.key){send(res,{ok:false,msg:'未配置 LLM。在本目录新建 llm.json，内容：{"baseURL":"https://api.deepseek.com","key":"sk-你的Key","model":"deepseek-chat"}，保存后无需重启。'});return}
       try{
         const data=JSON.parse(body||"{}");
+        if(!data.prompt){send(res,{ok:false,msg:"缺少 prompt"});return}
         const r=await fetch((cfg.baseURL||"https://api.deepseek.com").replace(/\/$/,"")+"/chat/completions",{
           method:"POST",
           headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.key},
@@ -58,7 +71,18 @@ const server=http.createServer(async(req,res)=>{
   }
   res.statusCode=404;send(res,{ok:false,msg:"not found"});
 });
-server.listen(PORT,"127.0.0.1",function(){
-  console.log("Pipeline server: http://127.0.0.1:"+PORT);
-  console.log("AI polish: create llm.json next to this file (see README in chat). Key stays on your machine.");
-});
+module.exports={stripHtml,isNowcoderUrl,parseNowcoderId,loadLLM,MAX_BODY,PORT};
+
+if(require.main===module){
+  server.on("error",function(e){
+    if(e.code==="EADDRINUSE"){
+      console.log("端口 "+PORT+" 已在运行中，直接打开 http://127.0.0.1:"+PORT+" 即可（无需重复启动）。");
+      process.exit(0);
+    }
+    throw e;
+  });
+  server.listen(PORT,"127.0.0.1",function(){
+    console.log("Pipeline server: http://127.0.0.1:"+PORT);
+    console.log("AI polish: create llm.json next to this file (see README). Key stays on your machine.");
+  });
+}
