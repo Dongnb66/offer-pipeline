@@ -79,9 +79,15 @@ export function loadApp(opts = {}) {
 
   const body = scriptMatch[1] + "\n;return {" +
     "projList,dirBest,renderPlan,renderInfer,confirmInfer,genPack,parseJing,analyzeJD," +
-    "renderLedger,renderDirs,renderPrep,loadProfile,saveProfile,esc,monthNow,SKILLS,DIRS,JD_DICT,TOPICS,ALIAS,ADJ," +
+    "renderLedger,renderDirs,renderPrep,loadProfile,saveProfile,esc,monthNow,SKILLS,DIRS,JD_DICT,TOPICS,ALIAS,ADJ,BANK," +
     "addRecord,buildBackup,importData,clearData,copyToClipboard,greetLength,switchTab,msg,toLedger," +
     "qkey,getPrep,prepState,markPrep,prepStats,miniBtns,prepRow,weakList,renderWeak,allPrepItems,hotRank,resetPrep,lastTab,registerQ,PREPKEY,TABKEY," +
+    "buildPack,saveSnapshot,getSnaps,restoreSnapshot,delSnapshot,renderSnaps,SNAPKEY," +
+    "buildFillScript,packFields,genFillScript," +
+    "getCampaigns,addCampaign,onAddCampaign,delCampaign,addCampaignJob,setCampaignJobStatus,delCampaignJob,campaignProgress,importLedgerToCampaign,renderCampaigns,CAMPKEY," +
+    "getJings,saveJing,delJing,jingTopicStats,hotRankCross,renderJings,openNowcoderSearch,JINGKEY," +
+    "buildPolishReq,KB,SCENE_A,getTarget,studyRow,sceneRow,answerCard,buildQuiz,genQuiz,TARGETKEY,toggleKb,toggleAns," +
+    "QBANK,QB_BY_KEY,quizRow,toggleQa,chooseSel," +
     "setProfile:(p)=>{profile=p},getProfile:()=>profile,el:el};";
 
   const factory = new Function(

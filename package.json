@@ -1,11 +1,14 @@
 {
   "name": "offer-pipeline",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "private": true,
   "description": "本地求职流水线：画像 → 能力推断 → 方向推荐 → JD 分析 → 打招呼 → 投递台账 → 面试备战 → 简历直填包",
   "scripts": {
     "start": "node server.js",
     "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "keywords": ["job-hunting", "resume", "interview-prep", "single-file", "zero-dependency"],
   "license": "MIT"

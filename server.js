@@ -23,11 +23,21 @@ function isNowcoderUrl(url){
 function parseNowcoderId(url){ const m=String(url||"").match(/discuss\/(\d+)/); return m?m[1]:null }
 function send(res,obj){res.setHeader("Content-Type","application/json; charset=utf-8");res.end(JSON.stringify(obj))}
 function loadLLM(){try{return JSON.parse(fs.readFileSync(path.join(__dirname,"llm.json"),"utf8"))}catch(e){return null}}
+/* Origin 校验：本服务能花用户的 LLM Key，绝不能让浏览器里任意网页（CORS *）静默调用。
+   只放行无 Origin（curl/同源 GET）、file://（离线打开 index.html，Origin 为 "null"）、本机回环来源。 */
+const LOOPBACK=/^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
+function checkOrigin(req){
+  const o=String(req.headers.origin||"");
+  if(!o||o==="null")return true;
+  try{return LOOPBACK.test(o)}catch(e){return false}
+}
 const MAX_BODY=100*1024;
 const server=http.createServer(async(req,res)=>{
-  res.setHeader("Access-Control-Allow-Origin","*");
-  res.setHeader("Access-Control-Allow-Headers","Content-Type");
-  if(req.method==="OPTIONS"){res.end();return}
+  const origin=String(req.headers.origin||"");
+  const originOk=checkOrigin(req);
+  if(originOk&&origin){res.setHeader("Access-Control-Allow-Origin",origin);res.setHeader("Vary","Origin")}
+  if(req.method==="OPTIONS"){res.statusCode=originOk?204:403;if(originOk)res.setHeader("Access-Control-Allow-Headers","Content-Type");res.end();return}
+  if(!originOk){res.statusCode=403;send(res,{ok:false,msg:"Origin 校验失败：仅允许本机页面调用本服务"});return}
   const u=new URL(req.url,"http://x");
   if(u.pathname==="/"){res.setHeader("Content-Type","text/html; charset=utf-8");fs.createReadStream(HTML).pipe(res);return}
   if(u.pathname==="/api/ping"){send(res,{ok:true});return}
@@ -37,12 +47,12 @@ const server=http.createServer(async(req,res)=>{
     const id=parseNowcoderId(url);
     if(!id){send(res,{ok:false,msg:"只支持 discuss 链接。exam 页在登录态抓不到、feed 页不 SSR——这是实测结论，请直接复制粘贴面经原文。"});return}
     try{
-      const r=await fetch("https://m.nowcoder.com/discuss/"+id,{headers:{"User-Agent":UA}});
+      const r=await fetch("https://m.nowcoder.com/discuss/"+id,{headers:{"User-Agent":UA},signal:AbortSignal.timeout(10000)});
       const html=await r.text();
       const text=stripHtml(html);
       if(text.length<200){send(res,{ok:false,msg:"抓到的正文太短（可能需登录或页面改版），请直接复制粘贴面经原文。"});return}
       send(res,{ok:true,text:text});
-    }catch(e){send(res,{ok:false,msg:"抓取失败："+e.message})}
+    }catch(e){send(res,{ok:false,msg:/timeout|abort/i.test(e&&e.message)?"抓取超时（10 秒），请稍后重试或直接复制粘贴面经原文。":"抓取失败："+e.message})}
     return;
   }
   if(u.pathname==="/api/ai"&&req.method==="POST"){
@@ -71,7 +81,7 @@ const server=http.createServer(async(req,res)=>{
   }
   res.statusCode=404;send(res,{ok:false,msg:"not found"});
 });
-module.exports={stripHtml,isNowcoderUrl,parseNowcoderId,loadLLM,MAX_BODY,PORT};
+module.exports={stripHtml,isNowcoderUrl,parseNowcoderId,loadLLM,checkOrigin,MAX_BODY,PORT};
 
 if(require.main===module){
   server.on("error",function(e){

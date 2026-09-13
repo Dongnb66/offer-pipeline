@@ -53,3 +53,18 @@ test("index.html 保持零外部依赖（无 CDN / 无外链脚本样式）", ()
   assert.equal(html.match(/<link[^>]+stylesheet/i), null, "出现外链样式");
   assert.equal(html.match(/https?:\/\/cdn\./i), null, "出现 CDN 依赖");
 });
+
+test("本地服务必须校验 Origin，禁止通配符 CORS（防任意网页盗用 LLM Key）", () => {
+  const srv = readRepoFile("server.js");
+  assert.match(srv, /function checkOrigin/, "必须存在 Origin 校验函数");
+  assert.ok(!/Access-Control-Allow-Origin"\s*,\s*"\*"/.test(srv), "不得对任意来源放行 CORS");
+  assert.match(srv, /LOOPBACK/, "回环白名单必须显式存在");
+});
+
+test("版本号同步：package.json 与 index.html 标题一致", () => {
+  const pkg = JSON.parse(readRepoFile("package.json"));
+  const html = readRepoFile("index.html");
+  const m = html.match(/MVP (v0\.\d+)/);
+  assert.ok(m, "index.html 标题应带 MVP v0.x 版本号");
+  assert.ok(pkg.version.startsWith(m[1].slice(1) + "."), `package.json ${pkg.version} 与标题 ${m[1]} 不同步`);
+});

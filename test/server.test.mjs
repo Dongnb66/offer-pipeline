@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import fs from "node:fs";
 import path from "node:path";
 import { ROOT } from "../test-support/harness.mjs";
 
@@ -55,4 +56,18 @@ test("请求体上限为 100KB，防止本地服务被灌爆", () => {
 test("未配置 llm.json 时 loadLLM 返回 null 而不是抛错", () => {
   const cfg = srv.loadLLM();
   assert.ok(cfg === null || typeof cfg === "object");
+});
+
+test("checkOrigin 只放行无 Origin / file://(null) / 本机回环，外站一律拒绝", () => {
+  assert.equal(srv.checkOrigin({ headers: {} }), true, "同源 GET / curl 无 Origin，放行");
+  assert.equal(srv.checkOrigin({ headers: { origin: "null" } }), true, "file:// 离线页 Origin 为 null，放行");
+  assert.equal(srv.checkOrigin({ headers: { origin: "http://127.0.0.1:8321" } }), true);
+  assert.equal(srv.checkOrigin({ headers: { origin: "http://localhost:3000" } }), true);
+  assert.equal(srv.checkOrigin({ headers: { origin: "https://evil.com" } }), false, "外站不得调用本服务");
+  assert.equal(srv.checkOrigin({ headers: { origin: "https://127.0.0.1.evil.com" } }), false, "后缀仿冒不得通过");
+});
+
+test("牛客抓取必须带超时，不得无限挂起", () => {
+  const src = fs.readFileSync(path.join(ROOT, "server.js"), "utf8");
+  assert.match(src, /AbortSignal\.timeout\(\d+\)/, "fetch 必须设置 AbortSignal 超时");
 });
