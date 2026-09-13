@@ -1,5 +1,8 @@
 # offer-pipeline 求职流水线助手
 
+![test](https://github.com/Dongnb66/offer-pipeline/actions/workflows/test.yml/badge.svg)
+[后端仓库:agent-platform-java](https://github.com/Dongnb66/agent-platform-java) · 本仓库是它的前端,前后端合起来是一个项目。
+
 从「我是谁」到「面试进场」的本地求职流水线：**画像 → 能力推断 → 方向推荐 → JD 分析 → 打招呼初稿 → 投递台账 → 求职分线 → 面试备战 → 简历直填包（含版本快照与控制台填充脚本）**，一个闭环，数据全部存在本机浏览器。
 
 单文件前端（纯 HTML/CSS/JS，无外部依赖、无框架、无构建）+ 可选零依赖 Node 本地服务（面经抓取 / AI 润色）+ 可选 Spring Boot 后端（[agent-platform-java](https://github.com/Dongnb66/agent-platform-java)，服务端同步与 AI 能力）。
