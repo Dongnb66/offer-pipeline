@@ -3,7 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
-const SRC = "C:/Users/dong/WorkBuddy/2026-09-06-00-45-18/面试备战站_杨运栋.html";
+// 用法: QBANK_HTML=/path/to/备战站.html node test-support/extract_qbank.mjs
+const SRC = process.env.QBANK_HTML;
+if (!SRC || !fs.existsSync(SRC)) {
+  console.error("请用环境变量 QBANK_HTML 指定备战站 HTML 的绝对路径。\n"
+    + "例: QBANK_HTML=/path/to/面试备战站.html node test-support/extract_qbank.mjs");
+  process.exit(1);
+}
 const h = fs.readFileSync(SRC, "utf8");
 const i = h.indexOf("BANK");
 const start = h.indexOf("[", i);
